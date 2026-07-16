@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#062d25">
+<title>The Open 2026 PGA-Style Sweepstake</title>
+<style>
+:root{--bg:#071b17;--panel:#0d2a23;--panel2:#12382f;--text:#f5faf8;--muted:#a9c5bb;--gold:#f4c95d;--green:#36d399;--red:#fb7185;--line:#275247}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#061713,#0a211c 45%,#071713);color:var(--text)}
+header{position:sticky;top:0;z-index:5;background:rgba(6,23,19,.94);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.wrap{max-width:1180px;margin:auto;padding:16px}.top{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+h1{font-size:clamp(1.35rem,4vw,2.3rem);margin:0}.sub{color:var(--muted);font-size:.92rem}.live{display:inline-flex;align-items:center;gap:7px;background:#113b31;padding:8px 11px;border-radius:999px;font-weight:700}.dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}
+.controls{display:grid;grid-template-columns:1fr auto auto auto auto;gap:10px;margin-top:14px}.controls input,.controls select,.controls button,button{border:1px solid var(--line);background:#102f28;color:var(--text);border-radius:10px;padding:11px 13px;font:inherit}.controls button,button{cursor:pointer;font-weight:700}.controls button:hover,button:hover{background:#17463b}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}.card{background:linear-gradient(145deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:14px}.big{font-size:1.55rem;font-weight:800}.label{color:var(--muted);font-size:.83rem}
+.tablebox{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:850px}th,td{padding:12px;border-bottom:1px solid #1c443a;text-align:left}th{position:sticky;top:0;background:#102f28;color:#d6e9e2;font-size:.84rem;text-transform:uppercase;letter-spacing:.04em}.rank{font-weight:900;font-size:1.1rem}.leader{background:rgba(244,201,93,.10)}.score{font-weight:900;font-size:1.15rem}.under{color:#67e8b7}.over{color:#fda4af}.even{color:#e7f2ee}.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 8px;margin:2px;font-size:.82rem;white-space:nowrap}.cut{color:#ff9bab;border-color:#7e3341}.wd{color:#ffd29c;border-color:#7e5a2c}.details{color:var(--muted);font-size:.8rem}
+footer{text-align:center;color:var(--muted);padding:28px 12px}.notice{padding:12px;border:1px solid #816a2b;background:#362d11;border-radius:10px;margin:12px 0;color:#ffe49b}
+.admin{display:none;margin-top:14px}.admin.open{display:block}.admin textarea{width:100%;min-height:190px;background:#061713;color:#eafff7;border:1px solid var(--line);border-radius:10px;padding:10px}
+@media(max-width:700px){.summary{grid-template-columns:repeat(2,1fr)}.controls{grid-template-columns:1fr 1fr}.controls input{grid-column:1/-1}.wrap{padding:12px}}
+
+.tv-mode header,.tv-mode footer,.tv-mode .controls,.tv-mode #adminToggle{display:none}.tv-mode .wrap{max-width:none}.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}.podium .card{border-color:#6b5a2a}.insights{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}@media(max-width:800px){.insights{grid-template-columns:repeat(2,1fr)}}
+</style>
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#062d25"></head>
+<body>
+<header><div class="wrap">
+  <div class="top">
+    <div><h1>⛳ The Open 2026 PGA-Style Sweepstake</h1><div class="sub">Live competition centre · lowest combined score wins</div></div>
+    <div class="live"><span class="dot"></span><span id="liveText">Loading scores…</span></div>
+  </div>
+  <div class="controls">
+    <input id="search" placeholder="Search entrant or golfer…">
+    <select id="filter"><option value="all">Everyone</option><option value="active">3 players active</option><option value="risk">Cut / WD risk</option></select>
+    <button id="refresh">Refresh</button><button id="shareBtn">Share</button><button id="tvMode">TV mode</button>
+  </div>
+</div></header>
+<main class="wrap">
+  <div id="notice" class="notice" hidden></div>
+  <div class="podium" id="podium"></div><section class="summary">
+    <div class="card"><div class="big" id="leaderName">—</div><div class="label">Current leader</div></div>
+    <div class="card"><div class="big" id="leaderScore">—</div><div class="label">Leading combined score</div></div>
+    <div class="card"><div class="big" id="entryCount">—</div><div class="label">Competition entries</div></div>
+    <div class="card"><div class="big" id="updated">—</div><div class="label">Last updated</div></div>
+  </section>
+  <div class="insights" id="insights"></div><div class="tablebox"><table>
+    <thead><tr><th>Pos.</th><th>Entrant</th><th>Combined</th><th>Golfer 1</th><th>Golfer 2</th><th>Golfer 3</th><th>Status</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <p style="text-align:center"><button id="adminToggle">Admin / manual scores</button></p>
+  <section class="admin card" id="admin">
+    <h3>Manual score fallback</h3>
+    <p class="details">Paste a JSON array of golfers. This is useful before the API is connected or during an outage. Data is saved only in this browser.</p>
+    <textarea id="manual"></textarea>
+    <p><button id="saveManual">Save manual scores</button> <button id="clearManual">Clear manual scores</button></p>
+  </section>
+</main>
+<footer>Made for The Open 2026 competition · Share this page link with everyone</footer>
+<script>
+const aliases={
+ "r macintyre":["r macintyre","r macin tyre","robert macintyre"],
+ "m w lee":["m w lee","min woo lee"],
+ "s w kim":["s w kim","si woo kim"],
+ "j j spaun":["j j spaun","jj spaun"],
+ "l aberg":["l aberg","ludvig aberg"],
+ "b dechambeau":["b dechambeau","bryson dechambeau"],
+ "r mcilroy":["r mcilroy","rory mcilroy"],
+ "m fitzpatrick":["m fitzpatrick","matt fitzpatrick","matthew fitzpatrick"],
+ "t fleetwood":["t fleetwood","tommy fleetwood"],
+ "s scheffler":["s scheffler","scottie scheffler"]
+};
+const norm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+function canonical(s){let n=norm(s);for(const [k,v] of Object.entries(aliases))if(v.includes(n))return k;return n}
+function fmtScore(n){if(n==null||Number.isNaN(n))return "—";return n===0?"E":n>0?`+${n}`:`${n}`}
+function scoreClass(n){return n<0?"under":n>0?"over":"even"}
+function statusText(p){const s=String(p.status||"active").toLowerCase();if(s.includes("cut"))return "CUT";if(s.includes("wd")||s.includes("withdraw"))return "WD";return p.thru!=null?`Thru ${p.thru}`:"Active"}
+let entries=[], golfers={}, standings=[];
+async function load(){
+  entries=await fetch("entries.json").then(r=>r.json());
+  let manual=localStorage.getItem("manualGolfScores");
+  if(manual){
+    try{useScores(JSON.parse(manual));showNotice("Showing manual scores saved on this device.");return}catch(e){}
+  }
+  try{
+    const r=await fetch("/api/leaderboard",{cache:"no-store"});
+    if(!r.ok) throw new Error(await r.text());
+    const data=await r.json();
+    useScores(data.players||data.leaderboard||data);
+    document.getElementById("liveText").textContent="Live scores connected";
+  }catch(e){
+    useScores([]);
+    showNotice("The display is ready, but live scores are not connected yet. The organiser must add the free API key and tournament ID in Cloudflare. You can also use Admin / manual scores.");
+    document.getElementById("liveText").textContent="Setup required";
+  }
+}
+function showNotice(t){const n=document.getElementById("notice");n.textContent=t;n.hidden=false}
+function useScores(list){
+  golfers={};
+  (Array.isArray(list)?list:[]).forEach(p=>{
+    const first=p.firstName||p.first_name||"", last=p.lastName||p.last_name||"";
+    const name=p.name||p.playerName||p.player_name||`${first} ${last}`.trim();
+    const scoreRaw=p.score??p.totalScore??p.total??p.toPar??p.currentScore;
+    let score=typeof scoreRaw==="string"?(scoreRaw==="E"?0:Number(scoreRaw.replace("+",""))):Number(scoreRaw);
+    if(Number.isNaN(score))score=null;
+    golfers[canonical(name)]={name,score,status:p.status||p.playerStatus||"active",thru:p.thru??p.holesCompleted??p.holes};
+  });
+  standings=entries.map(e=>{
+    const ps=e.players.map(short=>{
+      let found=golfers[canonical(short)];
+      if(!found){
+        const target=canonical(short), bits=target.split(" ");
+        found=Object.values(golfers).find(g=>{const n=canonical(g.name);return bits.every(b=>n.includes(b))});
+      }
+      return {short,...(found||{name:short,score:null,status:"waiting",thru:null})};
+    });
+    const valid=ps.every(p=>p.score!=null);
+    const combined=valid?ps.reduce((a,p)=>a+p.score,0):null;
+    const bad=ps.some(p=>/cut|wd|withdraw/i.test(p.status));
+    return {...e,ps,combined,bad,active:ps.filter(p=>!/cut|wd|withdraw/i.test(p.status)).length};
+  }).sort((a,b)=>{
+    if(a.bad!==b.bad)return a.bad?1:-1;
+    if(a.combined==null&&b.combined!=null)return 1;
+    if(a.combined!=null&&b.combined==null)return -1;
+    return (a.combined??999)-(b.combined??999)||a.entrant.localeCompare(b.entrant);
+  });
+  render();
+}
+function render(){
+  const q=norm(document.getElementById("search").value), f=document.getElementById("filter").value;
+  let shown=standings.filter(s=>{
+    const match=!q||norm(s.entrant+" "+s.players.join(" ")).includes(q);
+    const filt=f==="all"||(f==="active"&&s.active===3&&!s.bad)||(f==="risk"&&s.bad);
+    return match&&filt;
+  });
+  const rows=document.getElementById("rows");rows.innerHTML="";
+  shown.forEach((s,i)=>{
+    const tr=document.createElement("tr"); if(i===0&&!s.bad)tr.className="leader";
+    const playerCell=p=>`<span class="pill ${/cut/i.test(p.status)?"cut":/wd|withdraw/i.test(p.status)?"wd":""}"><b>${p.short}</b> ${fmtScore(p.score)} <span class="details">${statusText(p)}</span></span>`;
+    tr.innerHTML=`<td class="rank">${i+1}</td><td><b>${s.entrant}</b></td><td class="score ${scoreClass(s.combined)}">${fmtScore(s.combined)}</td><td>${playerCell(s.ps[0])}</td><td>${playerCell(s.ps[1])}</td><td>${playerCell(s.ps[2])}</td><td>${s.bad?"❌ Cut/WD":s.combined==null?"⏳ Waiting":"✅ In play"}</td>`;
+    rows.appendChild(tr);
+  });
+  const leader=standings.find(s=>!s.bad&&s.combined!=null);
+  document.getElementById("leaderName").textContent=leader?leader.entrant:"—";
+  const valid=standings.filter(s=>!s.bad&&s.combined!=null);
+  document.getElementById('podium').innerHTML=valid.slice(0,3).map((s,i)=>`<div class="card"><div class="label">${['🥇 1st','🥈 2nd','🥉 3rd'][i]}</div><div class="big">${s.entrant}</div><div class="score ${scoreClass(s.combined)}">${fmtScore(s.combined)}</div><div class="details">${s.ps.map(p=>`${p.short} ${fmtScore(p.score)}`).join(' · ')}</div></div>`).join('');
+  const counts={};entries.forEach(e=>e.players.forEach(p=>counts[canonical(p)]=(counts[canonical(p)]||0)+1));
+  const popular=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  const gap=valid[1]?valid[1].combined-valid[0].combined:null;
+  document.getElementById('insights').innerHTML=`<div class="card"><div class="label">Most popular golfer</div><div class="big">${popular?popular[0]:'—'}</div><div class="details">${popular?popular[1]+' picks':'—'}</div></div><div class="card"><div class="label">Leader gap</div><div class="big">${gap==null?'—':gap+' shot'+(gap===1?'':'s')}</div></div><div class="card"><div class="label">Still alive</div><div class="big">${standings.filter(s=>!s.bad&&s.active===3).length}</div><div class="details">All three golfers active</div></div><div class="card"><div class="label">Cut / WD</div><div class="big">${standings.filter(s=>s.bad).length}</div></div>`;
+  document.getElementById("leaderScore").textContent=leader?fmtScore(leader.combined):"—";
+  document.getElementById("entryCount").textContent=entries.length;
+  document.getElementById("updated").textContent=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+}
+document.getElementById("search").addEventListener("input",render);
+document.getElementById("filter").addEventListener("change",render);
+document.getElementById("refresh").onclick=()=>location.reload();
+document.getElementById('shareBtn').onclick=async()=>{const d={title:document.title,text:'Follow the live sweepstake leaderboard',url:location.href};if(navigator.share)await navigator.share(d);else{await navigator.clipboard.writeText(location.href);alert('Link copied')}};
+document.getElementById('tvMode').onclick=()=>document.body.classList.toggle('tv-mode');
+document.getElementById("adminToggle").onclick=()=>document.getElementById("admin").classList.toggle("open");
+document.getElementById("manual").value=localStorage.getItem("manualGolfScores")||`[
+  {"name":"Rory McIlroy","score":-6,"status":"active","thru":18},
+  {"name":"Tommy Fleetwood","score":-4,"status":"active","thru":15},
+  {"name":"Collin Morikawa","score":-3,"status":"active","thru":14}
+]`;
+document.getElementById("saveManual").onclick=()=>{try{JSON.parse(document.getElementById("manual").value);localStorage.setItem("manualGolfScores",document.getElementById("manual").value);location.reload()}catch(e){alert("The JSON is not valid.")}};
+document.getElementById("clearManual").onclick=()=>{localStorage.removeItem("manualGolfScores");location.reload()};
+load();
+setInterval(()=>{if(!localStorage.getItem("manualGolfScores"))location.reload()},15*60*1000);
+</script>
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js")</script></body></html>

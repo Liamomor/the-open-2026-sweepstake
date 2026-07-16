@@ -1,0 +1,1 @@
+const C='open-pga-v2',A=['./','index.html','entries.json'];self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A))));self.addEventListener('fetch',e=>e.respondWith(fetch(e.request).catch(()=>caches.match(e.request))));
